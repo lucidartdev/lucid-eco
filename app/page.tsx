@@ -10,11 +10,11 @@ export default function Home() {
 
       <ConnectWallet />
 
-      <TokenInfo />
+      <TokenInfo isConnected={false} />
 
       <Faucet />
 
-      <Staking />
+      <Staking isConnected={false} />
     </main>
   );
 }

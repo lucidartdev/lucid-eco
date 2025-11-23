@@ -1,33 +1,41 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { getContracts } from "@/lib/contract";
-import { ethers } from "ethers";
+import { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { getContracts } from '@/lib/contract';
 
-export default function TokenInfo() {
-  const [balance, setBalance] = useState("0");
-  const [address, setAddress] = useState("");
+interface TokenInfoProps {
+  isConnected: boolean;
+}
+
+export default function TokenInfo({ isConnected }: TokenInfoProps) {
+  const [name, setName] = useState('');
+  const [symbol, setSymbol] = useState('');
+  const [supply, setSupply] = useState('0');
 
   useEffect(() => {
-    async function load() {
-      if (!window.ethereum) return;
+    async function fetchTokenInfo() {
+      if (!isConnected || !window.ethereum) return;
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const user = await signer.getAddress();
-      setAddress(user);
+      const { token } = await getContracts();
+      const tokenName = await token.name();
+      const tokenSymbol = await token.symbol();
+      const tokenSupply = await token.totalSupply();
 
-      const { token } = await getContracts(signer);
-      const bal = await token.balanceOf(user);
-      setBalance(ethers.formatUnits(bal, 18));
+      setName(tokenName);
+      setSymbol(tokenSymbol);
+      setSupply(ethers.formatUnits(tokenSupply, 18));
     }
-    load();
-  }, []);
+
+    fetchTokenInfo();
+  }, [isConnected]);
 
   return (
-    <div className="bg-gray-900 p-5 rounded-xl">
-      <h2 className="text-xl font-bold mb-2">Your Token Balance</h2>
-      <p className="text-2xl">{balance} LUT</p>
+    <div className="bg-gray-900 p-5 rounded-xl space-y-2">
+      <h2 className="text-xl font-bold">Token Info</h2>
+      <p>Name: {name}</p>
+      <p>Symbol: {symbol}</p>
+      <p>Total Supply: {supply}</p>
     </div>
   );
 }
