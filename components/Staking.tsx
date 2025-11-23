@@ -1,39 +1,41 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { ethers } from "ethers";
-import { getContracts } from "@/lib/contract";
+import { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { getContracts } from '@/lib/contract';
 
-export default function Staking() {
-  const [amount, setAmount] = useState("");
-  const [staked, setStaked] = useState("0");
-  const [rewards, setRewards] = useState("0");
+interface StakingProps {
+  isConnected: boolean;
+}
 
-  async function refresh() {
-    if (!window.ethereum) return;
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const user = await signer.getAddress();
-
-    const { staking } = await getContracts(signer);
-
-    const stakeBal = await staking.stakedBalance(user);
-    const rewardBal = await staking.calculateRewards(user);
-
-    setStaked(ethers.formatUnits(stakeBal, 18));
-    setRewards(ethers.formatUnits(rewardBal, 18));
-  }
+export default function Staking({ isConnected }: StakingProps) {
+  const [amount, setAmount] = useState('');
+  const [staked, setStaked] = useState('0');
+  const [rewards, setRewards] = useState('0');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    async function fetchStakingInfo() {
+      if (!isConnected || !window.ethereum) return;
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const user = await signer.getAddress();
+      const { staking } = await getContracts(signer);
+      const stakeBal = await staking.stakedBalance(user);
+      const rewardBal = await staking.calculateRewards(user);
+      setStaked(ethers.formatUnits(stakeBal, 18));
+      setRewards(ethers.formatUnits(rewardBal, 18));
+    }
+    fetchStakingInfo();
+  }, [isConnected, refreshTrigger]);
 
   async function stake() {
     if (!amount) return;
+    if (!isConnected) return alert('Connect wallet first');
+    if (!window.ethereum) return alert('Please install MetaMask');
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    const user = await signer.getAddress();
 
     const { token, staking } = await getContracts(signer);
 
@@ -47,11 +49,14 @@ export default function Staking() {
     const tx = await staking.stake(parsed);
     await tx.wait();
 
-    alert("Staked!");
-    refresh();
+    alert('Staked!');
+    setRefreshTrigger(t => t + 1);
   }
 
   async function unstake() {
+    if (!isConnected) return alert('Connect wallet first');
+    if (!window.ethereum) return alert('Please install MetaMask');
+
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
@@ -59,11 +64,14 @@ export default function Staking() {
     const tx = await staking.unstake();
     await tx.wait();
 
-    alert("Unstaked!");
-    refresh();
+    alert('Unstaked!');
+    setRefreshTrigger(t => t + 1);
   }
 
   async function claimRewards() {
+    if (!isConnected) return alert('Connect wallet first');
+    if (!window.ethereum) return alert('Please install MetaMask');
+
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
@@ -71,8 +79,8 @@ export default function Staking() {
     const tx = await staking.claimRewards();
     await tx.wait();
 
-    alert("Rewards claimed!");
-    refresh();
+    alert('Rewards claimed!');
+    setRefreshTrigger(t => t + 1);
   }
 
   return (
